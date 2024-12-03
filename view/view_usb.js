@@ -1,5 +1,4 @@
 import { usb } from '../js/usb.js';
-import '../js/pageLog.js';
 
 // 创建 UI 元素
 const buttonConnect = document.createElement('button');
