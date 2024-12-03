@@ -1,5 +1,20 @@
 import { hid } from '../js/hid.js';
 
+(function() {
+  // 保存原有的 console.log
+  const originalLog = console.log;
+
+  // 重写 console.log，使日志信息输出到页面的日志容器
+  console.log = function(...args) {
+      // 调用原来的 console.log，保持控制台输出
+      originalLog.apply(console, args);
+
+      // 将日志传递给页面的日志容器
+      window.logToPage(args.join(' '));
+  };
+})();
+
+
 // HID 过滤器示例
 const filters = {
   Keyboard: new hid.Filter({ usagePage: 0x01, usage: 0x06 }),
@@ -25,6 +40,7 @@ async function updateDeviceList() {
   deviceList.innerHTML = ''; // 清空设备列表
   try {
     const devices = await hid.getConnectedDevices();
+    console.log('已授权的 HID 设备:', devices);
     if (devices.length > 0) {
       devices.forEach(device => {
         if (device.opened) {
@@ -50,7 +66,7 @@ buttonConnect.addEventListener('click', async () => {
     if (devices.length > 0) {
       hid.openMultiple(devices);
       console.log('已连接的 HID 设备:', devices);
-      alert(`连接成功: ${devices.map(d => d.productName).join(', ')}`);
+      console.log(`连接成功: ${devices.map(d => d.productName).join(', ')}`);
     } else {
       console.log('没有连接 HID 设备');
     }
@@ -72,9 +88,9 @@ buttonDisconnect.addEventListener('click', async () => {
           hid.disconnect(device);
         }
       });
-      alert(`设备${devices.map(d => d.productName).join(', ')}关闭`);
+      console.log(`设备${devices.map(d => d.productName).join(', ')}关闭`);
     } else {
-      alert('HID设备无法断开');
+      console.log('HID设备无法断开');
     }
     updateDeviceList();
   } catch (error) {

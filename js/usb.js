@@ -22,7 +22,7 @@ async function init(filters = []) {
       return Promise.resolve(device);
     })
     .catch(error => {
-      return exception(error);
+      reject(exception(error));
     });
 }
 
@@ -52,25 +52,27 @@ class Filter {
 
 // 连接 USB 设备
 function connect(device) {
-  console.log('connect to device:', device);
   return new Promise((resolve, reject) => {
     device.open()
       .then(() => {
+        console.info(`device connected: ${device.productName}`);
         resolve(device);
       })
       .catch(error => {
-        return exception(error);
+        reject(exception(error));
       });
   });
 }
 
 // 关闭 USB 设备
+// 关闭 USB 设备
 function disconnect(device) {
   return new Promise((resolve, reject) => {
     if (!device.opened) {
-      console.log(`device not opened: ${device.productName}`);
-      return;
+      console.error(`device not opened: ${device.productName}`);
+      return resolve(device);  // 如果设备没有打开，直接返回
     }
+    // 等待设备关闭操作完成
     device.close()
       .then(() => {
         if (!device.opened) {
@@ -79,39 +81,38 @@ function disconnect(device) {
         resolve(device);
       })
       .catch(error => {
-        return exception(error);
+        reject(exception(error));
       });
   });
 }
 
-// 获取所有已连接的 USB 设备
+
+// 获取所有授权连接的 USB 设备
 function getConnectedDevices() {
   return new Promise((resolve, reject) => {
-    // 获取所有已连接的 USB 设备
+    // 获取所有授权连接的 USB 设备
     navigator.usb.getDevices()
       .then(devices => {
         resolve(devices);  // 返回设备列表
       })
       .catch(error => {
-        return exception(error);
+        reject(exception(error));
       });
   });
 }
 
-// 打开 USB 设备
 function open(device) {
+  consolelog(typeof device);
   if (device === null) {
-    return;
+    return Promise.reject(new Error("Device is null"));
   }
-  return new Promise((resolve, reject) => {
-    device.open()
-      .then(() => {
-        resolve(device);
-      })
-      .catch(error => {
-        return exception(error);
-      });
-  });
+  return device.open()
+    .then(() => {
+      return device;
+    })
+    .catch(error => {
+      reject(exception(error)); // 错误传递到 exception
+    });
 }
 
 // 打开多个 usb 设备
@@ -149,14 +150,29 @@ function exception(error) {
   // 处理错误情况
   if (error.name === 'NotFoundError') {
     // 没有设备被选中或没有匹配的设备
-    return Promise.reject(new Error("No device selected or no matching devices found."));
+    return "No device selected or no matching devices found.";
   } else if (error.name === 'SecurityError') {
     // 用户拒绝访问设备或没有足够的权限
-    return Promise.reject(new Error("Access to the device was denied."));
+    return "Access to the device was denied.";
   } else {
     // 其他类型的错误
-    return Promise.reject(new Error(`An unexpected error occurred: ${error.message}`));
+    return `An unexpected error occurred: ${error.message}`;
   }
+}
+
+function getDeviceByProductId(productIds) {
+  return new Promise((resolve, reject) => {
+    navigator.usb.getDevices()
+      .then(devices => {
+        const device = devices.find(device => {
+          return productIds.includes(device.productId);
+        });
+        resolve(device);
+      })
+      .catch(error => {
+        reject(exception(error));
+      });
+  });
 }
 
 export const usb = {
@@ -167,5 +183,6 @@ export const usb = {
   checkUSBSupport,
   Filter,
   open,
-  openMultiple
+  openMultiple,
+  getDeviceByProductId
 };
